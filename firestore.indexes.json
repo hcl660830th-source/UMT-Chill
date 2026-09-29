@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "emp_file",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "date", "order": "ASCENDING" },
+        { "fieldPath": "table", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

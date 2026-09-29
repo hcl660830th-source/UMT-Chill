@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 僅伺服器 (Admin SDK) 可存取,客戶端一律拒絕
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

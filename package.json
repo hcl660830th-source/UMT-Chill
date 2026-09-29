@@ -1,0 +1,21 @@
+{
+  "name": "umt-chill-checkin",
+  "version": "1.0.0",
+  "private": true,
+  "description": "餐會報到系統",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "sample": "node scripts/make-sample.js",
+    "dev": "netlify dev"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "firebase-admin": "^12.6.0",
+    "jsonwebtoken": "^9.0.2",
+    "serverless-http": "^3.2.0"
+  },
+  "devDependencies": {
+    "xlsx": "^0.18.5"
+  }
+}
