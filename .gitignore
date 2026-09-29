@@ -3,3 +3,7 @@ data
 .env
 .netlify
 *.log
+
+# Firebase 服務帳戶金鑰(切勿提交)
+umt-chill-e1876-firebase-adminsdk-fbsvc-3a4a86abbe.json
+*-firebase-adminsdk-*.json
