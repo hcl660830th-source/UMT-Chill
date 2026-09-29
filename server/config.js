@@ -1,6 +1,6 @@
 // 集中設定:梯次、預設參數、內建管理員
 module.exports = {
-  DATES: ['11/03', '11/10'],
+  DATES: ['10/03', '10/11'],
   ADMIN_USER: process.env.ADMIN_USER || 'admin',
   ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || 'umt@1003',
   JWT_SECRET: process.env.JWT_SECRET || 'dev-only-jwt-secret-change-me',

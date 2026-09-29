@@ -180,10 +180,17 @@ api.post('/emp', auth, need('admin'), wrap(async (req, res) => {
 api.put('/emp/:id', auth, need('admin'), wrap(async (req, res) => {
   const old = await db.getEmp(req.params.id);
   if (!old) return fail(res, 404, 'EMP_NOT_FOUND');
-  const { doc, err } = toDoc({ ...req.body, date: old.date, empNo: old.empNo }, true);
+  const { doc, err } = toDoc({ ...req.body, date: req.body.date || old.date, empNo: old.empNo }, true);
   if (err) return fail(res, 400, err);
   const { id, ...rest } = doc;
-  await db.update(old.id, rest);
+  if (id === old.id) {
+    await db.update(old.id, rest);
+  } else { // 日期變更 = 文件 ID 變更:寫入新文件後刪除舊文件
+    if (await db.getEmp(id)) return fail(res, 409, 'EMP_EXISTS');
+    if (!rest.pwd) rest.pwd = old.pwd;
+    await db.upsertMany([{ id, ...rest }]);
+    await db.remove(old.id);
+  }
   res.json({ ok: true });
 }));
 

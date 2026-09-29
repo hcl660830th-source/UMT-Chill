@@ -87,7 +87,7 @@ function loginView() {
       <h1>${esc(t('title'))}</h1><hr class="gold-line">
       <form id="f" autocomplete="on">
         <label>${esc(t('empNo'))}</label><input id="empNo" autocomplete="username" required>
-        <label>${esc(t('password'))}</label><input id="pw" type="password" autocomplete="current-password" required>
+        <label>${esc(t('password'))}</label><input id="pw" type="password" autocomplete="current-password" placeholder="${esc(t('pw_hint'))}" required>
         <div id="dateBox" class="hidden form-select"><label>${esc(t('choose_date'))}</label><select id="date"></select></div>
         <button class="block" type="submit">${esc(t('login'))}</button>
         <div id="err" class="msg-err"></div>
@@ -115,6 +115,7 @@ function loginView() {
 
 /* ---------- 員工前台 ---------- */
 function meView(box) {
+  box.classList.add('lg');
   box.innerHTML = `<div class="mute">${esc(t('loading'))}</div>`;
   api('/me').then((d) => {
     if (d.me.checked === 'Y') infoView(box, d); else checkinView(box, d);
@@ -150,7 +151,7 @@ function infoView(box, d) {
 function checkinView(box, d) {
   box.innerHTML = `
     <div class="card">
-      <span class="badge">${esc(t('need_checkin'))}</span>
+      <div class="big">${esc(t('need_checkin'))}</div>
       <div class="big" style="margin:12px 0">${esc(d.me.name)}</div>
       <div class="mute">${esc(d.me.empNo)} · ${esc(d.me.dept)} · ${esc(d.me.date)}</div>
     </div>
@@ -270,6 +271,7 @@ function wQr(box) {
 }
 
 function wManual(box) {
+  box.classList.add('lg');
   box.innerHTML = `
     <div class="card">
       <p class="mute" style="margin-top:0">${esc(t('manual_hint'))}</p>
@@ -364,7 +366,7 @@ function aEmp(box) {
   let list = [], date = '', q = '';
   box.innerHTML = `
     <div class="card"><div class="row">
-      <select id="d"><option value="">${esc(t('all'))}</option><option>11/03</option><option>11/10</option></select>
+      <select id="d"><option value="">${esc(t('all'))}</option><option>10/03</option><option>10/11</option></select>
       <input id="q" placeholder="${esc(t('search'))}">
       <button id="add">${esc(t('add'))}</button>
     </div></div>
@@ -397,13 +399,13 @@ function aEmp(box) {
   load();
 
   function editor(m) {
-    const isNew = !m; m = m || { date: '11/03', checked: 'N', verified: 'N', welfare: 'N' };
+    const isNew = !m; m = m || { date: '10/03', checked: 'N', verified: 'N', welfare: 'N' };
     const yn = (id, v) => `<select id="${id}"><option value="N" ${v === 'N' ? 'selected' : ''}>N</option><option value="Y" ${v === 'Y' ? 'selected' : ''}>Y</option></select>`;
     const ov = document.createElement('div'); ov.className = 'modal';
     ov.innerHTML = `<div class="card form-select">
       <h2>${esc(t(isNew ? 'add' : 'edit'))}</h2>
       <div class="grid2">
-        <div><label>${esc(t('date'))}</label><select id="e_date" ${isNew ? '' : 'disabled'}><option ${m.date === '11/03' ? 'selected' : ''}>11/03</option><option ${m.date === '11/10' ? 'selected' : ''}>11/10</option></select></div>
+        <div><label>${esc(t('date'))}</label><select id="e_date"><option ${m.date === '10/03' ? 'selected' : ''}>10/03</option><option ${m.date === '10/11' ? 'selected' : ''}>10/11</option></select></div>
         <div><label>${esc(t('empNo'))}</label><input id="e_no" value="${esc(m.empNo)}" ${isNew ? '' : 'disabled'}></div>
         <div><label>${esc(t('name'))}</label><input id="e_name" value="${esc(m.name)}"></div>
         <div><label>${esc(t('dept'))}</label><input id="e_dept" value="${esc(m.dept)}"></div>

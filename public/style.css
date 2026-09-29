@@ -25,7 +25,7 @@ h2 { font-size: 18px; }
   box-shadow: 0 8px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(201,169,110,.08); }
 .gold-line { height: 1px; background: linear-gradient(90deg, transparent, var(--gold), transparent); margin: 6px 0 18px; border: 0; }
 
-label { display: block; font-size: 13px; color: var(--mute); margin: 12px 0 6px; letter-spacing: .06em; }
+label { display: block; font-size: 18px; color: var(--gold2); margin: 14px 0 8px; letter-spacing: .06em; }
 input, select { width: 100%; padding: 12px 14px; font-size: 16px; color: var(--text); background: var(--bg2);
   border: 1px solid var(--line); border-radius: 10px; outline: none; }
 input:focus, select:focus { border-color: var(--gold); }
@@ -78,3 +78,8 @@ th { color: var(--mute); font-weight: 400; position: sticky; top: 0; background:
 .toast { position: fixed; left: 50%; bottom: 28px; transform: translateX(-50%); background: var(--gold); color: #1a140d;
   padding: 12px 20px; border-radius: 10px; z-index: 20; max-width: 90vw; }
 .toast.err { background: var(--err); }
+
+/* 104 驗證、我的資料:內文加大 */
+.lg, .lg .mute, .lg .kv dt, .lg input, .lg button, .lg .badge, .lg .msg-err, .lg .msg-ok { font-size: 18px; }
+
+::placeholder { color: var(--mute); opacity: .45; }

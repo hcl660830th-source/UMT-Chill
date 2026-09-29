@@ -1,7 +1,7 @@
 // 多語系:繁體中文 / Tiếng Việt / Bahasa Indonesia
 window.I18N = {
   zh: {
-    title: '餐會報到系統', login: '登入', logout: '登出', empNo: '工號', password: '密碼', name: '姓名', dept: '部門',
+    title: 'UMT的饗饗午茶時光', login: '登入', logout: '登出', empNo: '工號', password: '密碼', pw_hint: '身分證末5碼', name: '姓名', dept: '部門',
     table: '桌號', date: '日期', choose_date: '此工號有多個梯次,請選擇日期', loading: '載入中…', save: '儲存', cancel: '取消',
     delete: '刪除', edit: '編輯', add: '新增', search: '搜尋', all: '全部', yes: '是', no: '否', confirm_delete: '確定刪除?',
     checked_done: '已完成報到', checkin_time: '報到時間', tablemates: '同桌人員', me: '(本人)',
@@ -15,7 +15,7 @@ window.I18N = {
     verified: '已驗證', approver: '核准人員', location: '報到位置', checked_yn: '報到YN', verified_yn: '驗證YN', welfare_yn: '福委YN',
     p_lat: '餐廳緯度', p_lng: '餐廳經度', p_tol: '座標誤差容許值(公尺)', p_qr: 'QRCode 每幾秒重置', use_here: '使用目前位置',
     saved: '已儲存', import_btn: '上傳 XLSX 匯入人員資料', import_clear: '匯入前清空現有資料', import_ok: '匯入完成,筆數:',
-    import_hint: '欄位順序:日期/工號/姓名/部門/密碼/桌號/報到YN/驗證YN/福委YN/核准人員/報到位置/報到時間;日期限 11/03、11/10',
+    import_hint: '欄位順序:日期/工號/姓名/部門/密碼/桌號/報到YN/驗證YN/福委YN/核准人員/報到位置/報到時間;日期限 10/03、10/11',
     import_err: '匯入失敗,請修正以下列後重新上傳', row: '列', pwd_keep: '(空白表示不變更)', role_welfare: '福委', role_admin: '系統管理員',
     'err.LOGIN_FAILED': '工號或密碼錯誤', 'err.UNAUTHORIZED': '登入已逾時,請重新登入', 'err.FORBIDDEN': '無權限',
     'err.QR_INVALID': 'QRCode 無效', 'err.QR_EXPIRED': 'QRCode 已過期,請重新掃描', 'err.OUT_OF_RANGE': '不在餐廳範圍內,目前距離約',
@@ -24,7 +24,7 @@ window.I18N = {
     'err.EMP_EXISTS': '此日期工號已存在', 'err.DUPLICATE': '日期+工號重複', 'err.SERVER_ERROR': '系統錯誤,請稍後再試', 'err.NETWORK': '網路連線失敗',
   },
   vi: {
-    title: 'Hệ thống điểm danh tiệc', login: 'Đăng nhập', logout: 'Đăng xuất', empNo: 'Mã nhân viên', password: 'Mật khẩu', name: 'Họ tên', dept: 'Bộ phận',
+    title: 'UMT的饗饗午茶時光', login: 'Đăng nhập', logout: 'Đăng xuất', empNo: 'Mã nhân viên', password: 'Mật khẩu', pw_hint: '5 số cuối CCCD/CMND', name: 'Họ tên', dept: 'Bộ phận',
     table: 'Bàn', date: 'Ngày', choose_date: 'Mã này có nhiều đợt, vui lòng chọn ngày', loading: 'Đang tải…', save: 'Lưu', cancel: 'Hủy',
     delete: 'Xóa', edit: 'Sửa', add: 'Thêm', search: 'Tìm kiếm', all: 'Tất cả', yes: 'Có', no: 'Không', confirm_delete: 'Xác nhận xóa?',
     checked_done: 'Đã điểm danh', checkin_time: 'Giờ điểm danh', tablemates: 'Người cùng bàn', me: '(Tôi)',
@@ -38,7 +38,7 @@ window.I18N = {
     verified: 'Đã xác minh', approver: 'Người duyệt', location: 'Vị trí', checked_yn: 'Điểm danh', verified_yn: 'Xác minh', welfare_yn: 'Phúc lợi',
     p_lat: 'Vĩ độ nhà hàng', p_lng: 'Kinh độ nhà hàng', p_tol: 'Sai số cho phép (mét)', p_qr: 'Đổi mã QR mỗi (giây)', use_here: 'Dùng vị trí hiện tại',
     saved: 'Đã lưu', import_btn: 'Tải lên XLSX để nhập dữ liệu', import_clear: 'Xóa dữ liệu hiện có trước khi nhập', import_ok: 'Nhập xong, số dòng: ',
-    import_hint: 'Thứ tự cột: Ngày/Mã NV/Họ tên/Bộ phận/Mật khẩu/Bàn/Điểm danh/Xác minh/Phúc lợi/Người duyệt/Vị trí/Giờ; Ngày chỉ 11/03, 11/10',
+    import_hint: 'Thứ tự cột: Ngày/Mã NV/Họ tên/Bộ phận/Mật khẩu/Bàn/Điểm danh/Xác minh/Phúc lợi/Người duyệt/Vị trí/Giờ; Ngày chỉ 10/03, 10/11',
     import_err: 'Nhập thất bại, vui lòng sửa các dòng sau rồi tải lại', row: 'Dòng', pwd_keep: '(để trống nếu không đổi)', role_welfare: 'Phúc lợi', role_admin: 'Quản trị viên',
     'err.LOGIN_FAILED': 'Sai mã nhân viên hoặc mật khẩu', 'err.UNAUTHORIZED': 'Phiên đăng nhập hết hạn, vui lòng đăng nhập lại', 'err.FORBIDDEN': 'Không có quyền',
     'err.QR_INVALID': 'Mã QR không hợp lệ', 'err.QR_EXPIRED': 'Mã QR đã hết hạn, vui lòng quét lại', 'err.OUT_OF_RANGE': 'Không ở trong khu vực nhà hàng, khoảng cách hiện tại',
@@ -47,7 +47,7 @@ window.I18N = {
     'err.EMP_EXISTS': 'Mã NV đã tồn tại ở ngày này', 'err.DUPLICATE': 'Trùng ngày + mã NV', 'err.SERVER_ERROR': 'Lỗi hệ thống, vui lòng thử lại', 'err.NETWORK': 'Lỗi kết nối mạng',
   },
   id: {
-    title: 'Sistem Absensi Acara Makan', login: 'Masuk', logout: 'Keluar', empNo: 'No. Karyawan', password: 'Kata sandi', name: 'Nama', dept: 'Departemen',
+    title: 'UMT的饗饗午茶時光', login: 'Masuk', logout: 'Keluar', empNo: 'No. Karyawan', password: 'Kata sandi', pw_hint: '5 digit terakhir nomor ID', name: 'Nama', dept: 'Departemen',
     table: 'Meja', date: 'Tanggal', choose_date: 'No. ini punya beberapa sesi, pilih tanggal', loading: 'Memuat…', save: 'Simpan', cancel: 'Batal',
     delete: 'Hapus', edit: 'Ubah', add: 'Tambah', search: 'Cari', all: 'Semua', yes: 'Ya', no: 'Tidak', confirm_delete: 'Yakin hapus?',
     checked_done: 'Sudah absen', checkin_time: 'Waktu absen', tablemates: 'Teman semeja', me: '(Saya)',
@@ -61,7 +61,7 @@ window.I18N = {
     verified: 'Terverifikasi', approver: 'Penyetuju', location: 'Lokasi', checked_yn: 'Absen', verified_yn: 'Verifikasi', welfare_yn: 'Panitia',
     p_lat: 'Lintang restoran', p_lng: 'Bujur restoran', p_tol: 'Toleransi koordinat (meter)', p_qr: 'Ganti QR Code tiap (detik)', use_here: 'Pakai lokasi saat ini',
     saved: 'Tersimpan', import_btn: 'Unggah XLSX untuk impor data', import_clear: 'Hapus data lama sebelum impor', import_ok: 'Impor selesai, jumlah: ',
-    import_hint: 'Urutan kolom: Tanggal/No/Nama/Departemen/Sandi/Meja/Absen/Verifikasi/Panitia/Penyetuju/Lokasi/Waktu; Tanggal hanya 11/03, 11/10',
+    import_hint: 'Urutan kolom: Tanggal/No/Nama/Departemen/Sandi/Meja/Absen/Verifikasi/Panitia/Penyetuju/Lokasi/Waktu; Tanggal hanya 10/03, 10/11',
     import_err: 'Impor gagal, perbaiki baris berikut lalu unggah ulang', row: 'Baris', pwd_keep: '(kosong = tidak diubah)', role_welfare: 'Panitia', role_admin: 'Administrator',
     'err.LOGIN_FAILED': 'No. karyawan atau kata sandi salah', 'err.UNAUTHORIZED': 'Sesi habis, silakan masuk lagi', 'err.FORBIDDEN': 'Tidak diizinkan',
     'err.QR_INVALID': 'QR Code tidak valid', 'err.QR_EXPIRED': 'QR Code kedaluwarsa, pindai ulang', 'err.OUT_OF_RANGE': 'Di luar area restoran, jarak saat ini sekitar',
