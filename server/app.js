@@ -171,7 +171,7 @@ function toDoc(r, keepPwd) {
 api.post('/emp', auth, need('admin'), wrap(async (req, res) => {
   const { doc, err } = toDoc(req.body, false);
   if (err) return fail(res, 400, err);
-  if (await db.getEmp(doc.id)) return fail(res, 409, 'EMP_EXISTS');
+  if ((await db.findByEmpNo(doc.empNo)).length) return fail(res, 409, 'EMP_EXISTS'); // 工號唯一
   const { id, ...rest } = doc;
   await db.upsertMany([{ id, ...rest }]);
   res.json({ ok: true });
@@ -203,11 +203,14 @@ api.delete('/emp/:id', auth, need('admin'), wrap(async (req, res) => {
 api.post('/import', auth, need('admin'), wrap(async (req, res) => {
   const rows = Array.isArray(req.body.rows) ? req.body.rows : [];
   const docs = [], errors = [], seen = new Set();
+  // 工號唯一:不清空匯入時,資料庫已有的工號不可再匯入
+  const existing = req.body.clear ? new Set() : new Set((await db.listEmp()).map((d) => d.empNo));
   rows.forEach((r, i) => {
     const { doc, err } = toDoc(r, false);
     if (err) return errors.push({ row: i + 2, error: err });
-    if (seen.has(doc.id)) return errors.push({ row: i + 2, error: 'DUPLICATE' });
-    seen.add(doc.id);
+    if (seen.has(doc.empNo)) return errors.push({ row: i + 2, error: 'DUPLICATE' });
+    if (existing.has(doc.empNo)) return errors.push({ row: i + 2, error: 'EMP_EXISTS' });
+    seen.add(doc.empNo);
     docs.push(doc);
   });
   if (req.body.clear && !errors.length) await db.clearAll();

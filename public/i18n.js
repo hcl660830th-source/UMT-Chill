@@ -21,7 +21,7 @@ window.I18N = {
     'err.QR_INVALID': 'QRCode 無效', 'err.QR_EXPIRED': 'QRCode 已過期,請重新掃描', 'err.OUT_OF_RANGE': '不在餐廳範圍內,目前距離約',
     'err.ALREADY_CHECKED': '已完成報到', 'err.GPS_REQUIRED': '尚未取得定位', 'err.EMP_NOT_FOUND': '查無此工號',
     'err.BAD_DATE': '日期不正確', 'err.BAD_EMPNO': '工號不可空白', 'err.BAD_PASSWORD': '密碼不可空白', 'err.BAD_PARAMS': '參數不正確',
-    'err.EMP_EXISTS': '此日期工號已存在', 'err.DUPLICATE': '日期+工號重複', 'err.SERVER_ERROR': '系統錯誤,請稍後再試', 'err.NETWORK': '網路連線失敗',
+    'err.EMP_EXISTS': '此工號已存在', 'err.DUPLICATE': '檔案內工號重複', 'err.SERVER_ERROR': '系統錯誤,請稍後再試', 'err.NETWORK': '網路連線失敗',
   },
   vi: {
     title: 'UMT的饗饗午茶時光', login: 'Đăng nhập', logout: 'Đăng xuất', empNo: 'Mã nhân viên', password: 'Mật khẩu', pw_hint: '5 số cuối CCCD/CMND', name: 'Họ tên', dept: 'Bộ phận',
@@ -44,7 +44,7 @@ window.I18N = {
     'err.QR_INVALID': 'Mã QR không hợp lệ', 'err.QR_EXPIRED': 'Mã QR đã hết hạn, vui lòng quét lại', 'err.OUT_OF_RANGE': 'Không ở trong khu vực nhà hàng, khoảng cách hiện tại',
     'err.ALREADY_CHECKED': 'Đã điểm danh', 'err.GPS_REQUIRED': 'Chưa có vị trí', 'err.EMP_NOT_FOUND': 'Không tìm thấy mã nhân viên',
     'err.BAD_DATE': 'Ngày không đúng', 'err.BAD_EMPNO': 'Mã NV không được trống', 'err.BAD_PASSWORD': 'Mật khẩu không được trống', 'err.BAD_PARAMS': 'Tham số không đúng',
-    'err.EMP_EXISTS': 'Mã NV đã tồn tại ở ngày này', 'err.DUPLICATE': 'Trùng ngày + mã NV', 'err.SERVER_ERROR': 'Lỗi hệ thống, vui lòng thử lại', 'err.NETWORK': 'Lỗi kết nối mạng',
+    'err.EMP_EXISTS': 'Mã nhân viên đã tồn tại', 'err.DUPLICATE': 'Trùng mã nhân viên trong file', 'err.SERVER_ERROR': 'Lỗi hệ thống, vui lòng thử lại', 'err.NETWORK': 'Lỗi kết nối mạng',
   },
   id: {
     title: 'UMT的饗饗午茶時光', login: 'Masuk', logout: 'Keluar', empNo: 'No. Karyawan', password: 'Kata sandi', pw_hint: '5 digit terakhir nomor ID', name: 'Nama', dept: 'Departemen',
@@ -67,6 +67,6 @@ window.I18N = {
     'err.QR_INVALID': 'QR Code tidak valid', 'err.QR_EXPIRED': 'QR Code kedaluwarsa, pindai ulang', 'err.OUT_OF_RANGE': 'Di luar area restoran, jarak saat ini sekitar',
     'err.ALREADY_CHECKED': 'Sudah absen', 'err.GPS_REQUIRED': 'Lokasi belum didapat', 'err.EMP_NOT_FOUND': 'No. karyawan tidak ditemukan',
     'err.BAD_DATE': 'Tanggal salah', 'err.BAD_EMPNO': 'No. karyawan wajib diisi', 'err.BAD_PASSWORD': 'Kata sandi wajib diisi', 'err.BAD_PARAMS': 'Parameter salah',
-    'err.EMP_EXISTS': 'No. sudah ada pada tanggal ini', 'err.DUPLICATE': 'Tanggal + No. duplikat', 'err.SERVER_ERROR': 'Kesalahan sistem, coba lagi', 'err.NETWORK': 'Koneksi jaringan gagal',
+    'err.EMP_EXISTS': 'No. karyawan sudah ada', 'err.DUPLICATE': 'No. karyawan ganda dalam file', 'err.SERVER_ERROR': 'Kesalahan sistem, coba lagi', 'err.NETWORK': 'Koneksi jaringan gagal',
   },
 };
