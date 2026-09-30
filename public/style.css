@@ -83,3 +83,12 @@ th { color: var(--mute); font-weight: 400; position: sticky; top: 0; background:
 .lg, .lg .mute, .lg .kv dt, .lg input, .lg button, .lg .badge, .lg .msg-err, .lg .msg-ok { font-size: 18px; }
 
 ::placeholder { color: var(--mute); opacity: .45; }
+
+/* 驗證日期:呼吸燈 */
+@keyframes breathe {
+  0%, 100% { box-shadow: 0 0 4px 0 rgba(201,169,110,.25); border-color: rgba(201,169,110,.55); }
+  50% { box-shadow: 0 0 16px 3px rgba(226,204,155,.75); border-color: var(--gold2); }
+}
+select.breathe { width: 100%; animation: breathe 2.4s ease-in-out infinite; border-width: 2px; font-size: 18px; padding: 12px 14px; }
+.big-msg { font-size: 20px; font-weight: 600; margin: 0 0 14px; }
+button:disabled { cursor: not-allowed; filter: grayscale(.6); }

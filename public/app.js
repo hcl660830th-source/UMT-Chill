@@ -37,8 +37,13 @@ async function api(path, method, body) {
   }
   return data;
 }
-const errText = (e) => (e.code === 'OUT_OF_RANGE' && e.data.distance != null)
-  ? `${terr(e.code)} ${e.data.distance} ${t('meter')}` : terr(e.code || 'SERVER_ERROR');
+const dateMismatch = (vdate) => t('err.DATE_MISMATCH_A') + vdate + t('err.DATE_MISMATCH_B');
+const errText = (e) => {
+  if (e.code === 'OUT_OF_RANGE' && e.data.distance != null) return `${terr(e.code)} ${e.data.distance} ${t('meter')}`;
+  if (e.code === 'VERIFY_FAILED') return `${terr(e.code)} ${e.data.vdate}`;
+  if (e.code === 'DATE_MISMATCH') return dateMismatch(e.data.vdate);
+  return terr(e.code || 'SERVER_ERROR');
+};
 
 function logout() {
   S.token = null; S.role = null;
@@ -161,8 +166,9 @@ function checkinView(box, d) {
       <div class="mute" style="margin-top:6px">${esc(t('gps_every'))}</div>
     </div>
     <div class="card">
+      ${d.blocked ? `<div class="msg-err big-msg">${esc(dateMismatch(d.me.date))}</div>` : ''}
       <p class="mute" style="margin-top:0">${esc(t('checkin_hint'))}</p>
-      <button id="scanBtn" class="block" style="margin-top:0">${esc(t('scan'))}</button>
+      <button id="scanBtn" class="block" style="margin-top:0" ${d.blocked ? 'disabled' : ''}>${esc(t('scan'))}</button>
       <div id="reader"></div>
       <div id="res"></div>
     </div>`;
@@ -307,19 +313,30 @@ function wManual(box) {
   inp.onkeydown = (e) => { if (e.key === 'Enter') find(); };
 }
 
-function wList(box) {
+function wList(box, date) {
   box.innerHTML = `<div class="mute">${esc(t('loading'))}</div>`;
-  api('/stats').then((s) => {
+  api('/stats' + (date ? '?date=' + encodeURIComponent(date) : '')).then((s) => {
+    const rate = s.total ? Math.round((s.checked / s.total) * 100) : 0;
+    const stat = (label, v) => `<div><div class="mute">${esc(label)}</div><div class="big" style="font-size:26px">${v}</div></div>`;
     box.innerHTML = `
+      <div class="card form-select">
+        <label style="margin-top:0">${esc(t('date'))}</label>
+        <select id="ld">${s.dates.map((x) => `<option ${x === s.date ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
+      </div>
       <div class="card">
         <h2>${esc(t('progress'))} · ${esc(s.date)}</h2>
-        <div class="big">${s.checked} <span class="mute">/ ${s.total}</span></div>
+        <div class="grid2" style="gap:14px 12px">
+          ${stat(t('total'), s.total)}${stat(t('checked'), s.checked)}
+          ${stat(t('unchecked'), s.unchecked)}${stat(t('rate'), rate + '%')}
+          ${stat(t('by_qr'), s.byQr)}${stat(t('by_manual'), s.byManual)}
+        </div>
       </div>
       <div class="card scroll"><table>
         <tr><th>${esc(t('empNo'))}</th><th>${esc(t('name'))}</th><th>${esc(t('dept'))}</th><th>${esc(t('table'))}</th><th></th></tr>
         ${s.list.map((m) => `<tr><td>${esc(m.empNo)}</td><td>${esc(m.name)}</td><td>${esc(m.dept)}</td><td>${esc(m.table)}</td>
           <td>${m.checked === 'Y' ? `<span class="badge ok">${esc(t('checked'))}${m.verified === 'Y' ? ' ✓' : ''}</span>` : `<span class="mute">${esc(t('unchecked'))}</span>`}</td></tr>`).join('')}
       </table></div>`;
+    box.querySelector('#ld').onchange = (e) => wList(box, e.target.value);
   }).catch((e) => { box.innerHTML = `<div class="msg-err">${esc(errText(e))}</div>`; });
 }
 
@@ -343,6 +360,8 @@ function aParams(box) {
         <button id="here" class="sub block" style="margin-top:10px">${esc(t('use_here'))}</button>
         <label>${esc(t('p_tol'))}</label><input id="tol" type="number" min="1" value="${esc(p.toleranceMeters)}">
         <label>${esc(t('p_qr'))}</label><input id="sec" type="number" min="5" value="${esc(p.qrResetSeconds)}">
+        <label>${esc(t('p_vdate'))}</label>
+        <select id="vdate" class="breathe">${p.dates.map((x) => `<option ${x === p.verifyDate ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
         <button id="save" class="block">${esc(t('save'))}</button>
         <div class="mute" style="margin-top:14px">DB: ${esc(p.backend)}</div>
       </div>`;
@@ -355,6 +374,7 @@ function aParams(box) {
         await api('/params', 'PUT', {
           lat: box.querySelector('#lat').value, lng: box.querySelector('#lng').value,
           toleranceMeters: box.querySelector('#tol').value, qrResetSeconds: box.querySelector('#sec').value,
+          verifyDate: box.querySelector('#vdate').value,
         });
         toast(t('saved'));
       } catch (e) { toast(errText(e), true); }

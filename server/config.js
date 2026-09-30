@@ -11,5 +11,6 @@ module.exports = {
     lng: 121.564468,
     toleranceMeters: 200,
     qrResetSeconds: 30,
+    verifyDate: '10/03',
   },
 };

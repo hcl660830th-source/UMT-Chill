@@ -67,7 +67,9 @@ api.post('/login', wrap(async (req, res) => {
 api.get('/me', auth, need('employee', 'welfare'), wrap(async (req, res) => {
   const me = pub(req.emp);
   const p = await db.getParamsWithDefaults();
-  const out = { me, role: req.user.role, params: { lat: p.lat, lng: p.lng, toleranceMeters: p.toleranceMeters }, mates: [] };
+  const out = { me, role: req.user.role, params: { lat: p.lat, lng: p.lng, toleranceMeters: p.toleranceMeters, verifyDate: p.verifyDate }, mates: [] };
+  // 一般員工須為當日梯次才可報到(福委、管理員不受限)
+  out.blocked = req.user.role === 'employee' && me.date !== p.verifyDate;
   if (me.checked === 'Y' && me.table) {
     out.mates = (await db.listByTable(me.date, req.emp.table))
       .sort((a, b) => String(a.empNo).localeCompare(String(b.empNo), 'en', { numeric: true }))
@@ -81,6 +83,9 @@ api.post('/checkin', auth, need('employee', 'welfare'), wrap(async (req, res) =>
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return fail(res, 400, 'GPS_REQUIRED');
   if (req.emp.checked === 'Y') return fail(res, 409, 'ALREADY_CHECKED');
   const p = await db.getParamsWithDefaults();
+  if (req.user.role === 'employee' && req.emp.date !== p.verifyDate) {
+    return res.status(403).json({ error: 'DATE_MISMATCH', vdate: req.emp.date });
+  }
   const qrErr = verifyQr(req.body.qr, Number(p.qrResetSeconds));
   if (qrErr) return fail(res, 400, qrErr);
   const dist = U.distanceMeters(lat, lng, Number(p.lat), Number(p.lng));
@@ -103,15 +108,19 @@ api.get('/qr', auth, need('welfare'), wrap(async (req, res) => {
 
 // 104 人員基本資料驗證:福委輸入員工手機上的工號 -> 完成報到
 api.get('/lookup/:empNo', auth, need('welfare'), wrap(async (req, res) => {
-  const emp = await db.getEmp(U.docId(req.emp.date, String(req.params.empNo).trim()));
+  const emp = (await db.findByEmpNo(String(req.params.empNo).trim()))[0];
   if (!emp) return fail(res, 404, 'EMP_NOT_FOUND');
+  const p = await db.getParamsWithDefaults();
+  if (emp.date !== p.verifyDate) return res.status(400).json({ error: 'VERIFY_FAILED', vdate: emp.date });
   res.json(pub(emp));
 }));
 
 api.post('/manual-checkin', auth, need('welfare'), wrap(async (req, res) => {
   const empNo = String(req.body.empNo || '').trim();
-  const emp = await db.getEmp(U.docId(req.emp.date, empNo));
+  const emp = (await db.findByEmpNo(empNo))[0];
   if (!emp) return fail(res, 404, 'EMP_NOT_FOUND');
+  const p = await db.getParamsWithDefaults();
+  if (emp.date !== p.verifyDate) return res.status(400).json({ error: 'VERIFY_FAILED', vdate: emp.date }); // 不予記錄
   const ok = await db.checkinTx(emp.id, {
     checked: 'Y', verified: 'Y', approver: `${req.emp.empNo} ${req.emp.name}`.trim(),
     location: 'MANUAL', checkedAt: U.twDisplay(),
@@ -121,9 +130,17 @@ api.post('/manual-checkin', auth, need('welfare'), wrap(async (req, res) => {
 }));
 
 api.get('/stats', auth, need('welfare'), wrap(async (req, res) => {
-  const list = await db.listEmp(req.emp.date);
+  const p = await db.getParamsWithDefaults();
+  const date = U.normDate(req.query.date);
+  const sel = cfg.DATES.includes(date) ? date : p.verifyDate; // 預設顯示「驗證日期」梯次
+  const list = await db.listEmp(sel);
+  const done = list.filter((d) => d.checked === 'Y');
   res.json({
-    date: req.emp.date, total: list.length, checked: list.filter((d) => d.checked === 'Y').length,
+    date: sel, dates: cfg.DATES, verifyDate: p.verifyDate, total: list.length, checked: done.length,
+    unchecked: list.length - done.length,
+    byQr: done.filter((d) => d.location !== 'MANUAL').length,
+    byManual: done.filter((d) => d.location === 'MANUAL').length,
+    verified: done.filter((d) => d.verified === 'Y').length,
     list: list.map(pub).sort((a, b) => String(a.empNo).localeCompare(String(b.empNo), 'en', { numeric: true })),
   });
 }));
@@ -136,8 +153,9 @@ api.get('/params', auth, need('admin'), wrap(async (req, res) => {
 api.put('/params', auth, need('admin'), wrap(async (req, res) => {
   const lat = Number(req.body.lat), lng = Number(req.body.lng);
   const tol = Number(req.body.toleranceMeters), sec = Number(req.body.qrResetSeconds);
-  if (!(Math.abs(lat) <= 90) || !(Math.abs(lng) <= 180) || !(tol > 0) || !(sec >= 5)) return fail(res, 400, 'BAD_PARAMS');
-  await db.setParams({ lat, lng, toleranceMeters: tol, qrResetSeconds: Math.round(sec) });
+  if (!(Math.abs(lat) <= 90) || !(Math.abs(lng) <= 180) || !(tol > 0) || !(sec >= 5)
+    || !cfg.DATES.includes(req.body.verifyDate)) return fail(res, 400, 'BAD_PARAMS');
+  await db.setParams({ lat, lng, toleranceMeters: tol, qrResetSeconds: Math.round(sec), verifyDate: req.body.verifyDate });
   res.json({ ok: true });
 }));
 
