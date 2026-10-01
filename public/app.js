@@ -313,30 +313,50 @@ function wManual(box) {
   inp.onkeydown = (e) => { if (e.key === 'Enter') find(); };
 }
 
-function wList(box, date) {
+const HOLD_MS = 2000; // 長按多久觸發名單篩選
+
+function wList(box, date, filter = 'all') {
   box.innerHTML = `<div class="mute">${esc(t('loading'))}</div>`;
   api('/stats' + (date ? '?date=' + encodeURIComponent(date) : '')).then((s) => {
     const rate = s.total ? Math.round((s.checked / s.total) * 100) : 0;
-    const stat = (label, v) => `<div><div class="mute">${esc(label)}</div><div class="big" style="font-size:26px">${v}</div></div>`;
+    const rows = s.list.filter((m) => filter === 'all' || (filter === 'checked') === (m.checked === 'Y'));
+    // key 有值者可長按篩選(all / checked / unchecked)
+    const stat = (label, v, key) => `<div class="stat${key ? ' pressable' : ''}${key && key === filter ? ' active' : ''}"${key ? ` data-f="${key}"` : ''}>
+      <div class="mute">${esc(label)}</div><div class="big" style="font-size:26px">${v}</div></div>`;
     box.innerHTML = `
       <div class="card form-select">
         <label style="margin-top:0">${esc(t('date'))}</label>
         <select id="ld">${s.dates.map((x) => `<option ${x === s.date ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
       </div>
       <div class="card">
-        <h2>${esc(t('progress'))} · ${esc(s.date)}</h2>
+        <h2 style="margin-bottom:6px">${esc(t('progress'))} · ${esc(s.date)}</h2>
+        <div class="mute" style="font-size:13px;margin-bottom:12px">${esc(t('hold_filter_hint'))}</div>
         <div class="grid2" style="gap:14px 12px">
-          ${stat(t('total'), s.total)}${stat(t('checked'), s.checked)}
-          ${stat(t('unchecked'), s.unchecked)}${stat(t('rate'), rate + '%')}
+          ${stat(t('total'), s.total, 'all')}${stat(t('checked'), s.checked, 'checked')}
+          ${stat(t('unchecked'), s.unchecked, 'unchecked')}${stat(t('rate'), rate + '%')}
           ${stat(t('by_qr'), s.byQr)}${stat(t('by_manual'), s.byManual)}
         </div>
       </div>
+      <div class="mute" style="margin:0 4px 8px">${esc(t('showing'))} ${rows.length} / ${s.list.length}</div>
       <div class="card scroll"><table>
         <tr><th>${esc(t('empNo'))}</th><th>${esc(t('name'))}</th><th>${esc(t('dept'))}</th><th>${esc(t('table'))}</th><th></th></tr>
-        ${s.list.map((m) => `<tr><td>${esc(m.empNo)}</td><td>${esc(m.name)}</td><td>${esc(m.dept)}</td><td>${esc(m.table)}</td>
+        ${rows.length ? '' : `<tr><td colspan="5" class="mute">${esc(t('no_data'))}</td></tr>`}
+        ${rows.map((m) => `<tr><td>${esc(m.empNo)}</td><td>${esc(m.name)}</td><td>${esc(m.dept)}</td><td>${esc(m.table)}</td>
           <td>${m.checked === 'Y' ? `<span class="badge ok">${esc(t('checked'))}${m.verified === 'Y' ? ' ✓' : ''}</span>` : `<span class="mute">${esc(t('unchecked'))}</span>`}</td></tr>`).join('')}
       </table></div>`;
-    box.querySelector('#ld').onchange = (e) => wList(box, e.target.value);
+    box.querySelector('#ld').onchange = (e) => wList(box, e.target.value, filter);
+    box.querySelectorAll('.pressable').forEach((el) => {
+      let timer = null, x0 = 0, y0 = 0;
+      const cancel = () => { clearTimeout(timer); timer = null; el.classList.remove('holding'); };
+      el.addEventListener('pointerdown', (e) => {
+        x0 = e.clientX; y0 = e.clientY;
+        el.classList.add('holding');
+        timer = setTimeout(() => wList(box, s.date, el.dataset.f), HOLD_MS);
+      });
+      el.addEventListener('pointermove', (e) => { if (timer && Math.hypot(e.clientX - x0, e.clientY - y0) > 10) cancel(); });
+      ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => el.addEventListener(ev, cancel));
+      el.addEventListener('contextmenu', (e) => e.preventDefault());
+    });
   }).catch((e) => { box.innerHTML = `<div class="msg-err">${esc(errText(e))}</div>`; });
 }
 
