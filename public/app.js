@@ -158,7 +158,7 @@ function checkinView(box, d) {
     <div class="card">
       <div class="big">${esc(t('need_checkin'))}</div>
       <div class="big" style="margin:12px 0">${esc(d.me.name)}</div>
-      <div class="mute">${esc(d.me.empNo)} · ${esc(d.me.dept)} · ${esc(d.me.date)}</div>
+      <div class="mute">${esc(d.me.empNo)} · ${esc(d.me.dept)} · ${esc(d.me.date)} · ${esc(t('table'))} ${esc(d.me.table || '-')}</div>
     </div>
     <div class="card">
       <h2>${esc(t('gps'))}</h2>
