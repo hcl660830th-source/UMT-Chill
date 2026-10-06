@@ -241,6 +241,7 @@ function welfareView() {
     { key: 'qr', label: t('tab_qr'), render: wQr },
     { key: 'manual', label: t('tab_manual'), render: wManual },
     { key: 'list', label: t('tab_list'), render: wList },
+    { key: 'tables', label: t('tab_tables'), render: (b) => wTables(b) },
     { key: 'me', label: t('tab_me'), render: meView },
   ]);
 }
@@ -357,6 +358,57 @@ function wList(box, date, filter = 'all') {
       ['pointerup', 'pointercancel', 'pointerleave'].forEach((ev) => el.addEventListener(ev, cancel));
       el.addEventListener('contextmenu', (e) => e.preventDefault());
     });
+  }).catch((e) => { box.innerHTML = `<div class="msg-err">${esc(errText(e))}</div>`; });
+}
+
+// 桌號統計:依桌號彙總已報到人數,供與餐廳人員對點;open 為展開名單的桌號
+function wTables(box, date, open = new Set()) {
+  box.innerHTML = `<div class="mute">${esc(t('loading'))}</div>`;
+  api('/stats' + (date ? '?date=' + encodeURIComponent(date) : '')).then((s) => {
+    const at = new Date().toLocaleTimeString();
+    const groups = new Map();
+    s.list.forEach((m) => { const k = m.table || ''; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(m); });
+    const rows = [...groups.entries()]
+      .sort(([a], [b]) => (a === '') - (b === '') || a.localeCompare(b, 'en', { numeric: true })) // 未分桌排最後
+      .map(([table, ms]) => ({ table, ms, done: ms.filter((m) => m.checked === 'Y').length }));
+    const seated = rows.filter((r) => r.done).length;
+
+    const draw = () => {
+      box.innerHTML = `
+        <div class="card form-select">
+          <label style="margin-top:0">${esc(t('date'))}</label>
+          <select id="td">${s.dates.map((x) => `<option ${x === s.date ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
+        </div>
+        <div class="card">
+          <h2 style="margin-bottom:12px">${esc(t('tab_tables'))} · ${esc(s.date)}</h2>
+          <div class="grid2" style="gap:14px 12px">
+            <div class="stat"><div class="mute">${esc(t('checked'))}</div><div class="big" style="font-size:26px">${s.checked}</div></div>
+            <div class="stat"><div class="mute">${esc(t('tables_seated'))}</div><div class="big" style="font-size:26px">${seated} / ${rows.length}</div></div>
+          </div>
+          <div class="row" style="margin-top:12px">
+            <span class="mute">${esc(t('gps_updated'))} ${esc(at)}</span>
+            <button class="ghost" id="tr">${esc(t('refresh'))}</button>
+          </div>
+        </div>
+        <div class="mute" style="margin:0 4px 8px">${esc(t('table_tap_hint'))}</div>
+        <div class="card scroll"><table class="tcount">
+          <tr><th>${esc(t('table'))}</th><th class="num">${esc(t('checked'))}</th><th class="num">${esc(t('expected'))}</th><th class="num">${esc(t('unchecked'))}</th></tr>
+          ${rows.length ? '' : `<tr><td colspan="4" class="mute">${esc(t('no_data'))}</td></tr>`}
+          ${rows.map((r) => `
+            <tr class="trow${r.done === r.ms.length ? ' full' : ''}" data-t="${esc(r.table)}">
+              <td>${r.table ? esc(r.table) : esc(t('no_table'))}</td><td class="num n">${r.done}</td>
+              <td class="num">${r.ms.length}</td><td class="num">${r.ms.length - r.done || '-'}</td></tr>
+            ${open.has(r.table) ? `<tr class="tdetail"><td colspan="4">${r.ms.map((m) =>
+              `<span class="tn${m.checked === 'Y' ? '' : ' miss'}">${esc(m.empNo)} ${esc(m.name)}${m.checked === 'Y' ? '' : ' · ' + esc(t('unchecked'))}</span>`).join('')}</td></tr>` : ''}`).join('')}
+          <tr class="sum"><td>${esc(t('sum'))}</td><td class="num">${s.checked}</td><td class="num">${s.total}</td><td class="num">${s.unchecked}</td></tr>
+        </table></div>`;
+      box.querySelector('#td').onchange = (e) => wTables(box, e.target.value);
+      box.querySelector('#tr').onclick = () => wTables(box, s.date, open);
+      box.querySelectorAll('.trow').forEach((tr) => {
+        tr.onclick = () => { const k = tr.dataset.t; if (open.has(k)) open.delete(k); else open.add(k); draw(); };
+      });
+    };
+    draw();
   }).catch((e) => { box.innerHTML = `<div class="msg-err">${esc(errText(e))}</div>`; });
 }
 

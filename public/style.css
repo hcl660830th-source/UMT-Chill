@@ -98,3 +98,14 @@ button:disabled { cursor: not-allowed; filter: grayscale(.6); }
 .pressable.holding::after { animation: holdfill 2s linear forwards; }
 .pressable.active { outline: 1px solid var(--gold); }
 @keyframes holdfill { to { width: 100%; } }
+
+/* 桌號統計 */
+.tcount .num { text-align: right; font-variant-numeric: tabular-nums; }
+.tcount .trow { cursor: pointer; }
+.tcount .trow td:first-child { color: var(--gold); }
+.tcount .trow .n { font-size: 20px; color: var(--gold2); }
+.tcount .trow.full .n { color: var(--ok); }
+.tcount .tdetail td { white-space: normal; background: rgba(201,169,110,.05); font-size: 13px; }
+.tcount .tn { display: inline-block; margin: 2px 14px 2px 0; }
+.tcount .tn.miss { color: var(--mute); }
+.tcount .sum td { font-weight: 600; color: var(--gold2); border-top: 1px solid var(--gold); border-bottom: 0; }
