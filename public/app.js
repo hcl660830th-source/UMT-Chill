@@ -118,6 +118,24 @@ function loginView() {
   };
 }
 
+// 車號編輯區塊:save(value) 回傳 API 結果;onSaved(carNo) 可同步更新畫面其他位置
+function carEditor(el, value, save, onSaved) {
+  el.innerHTML = `
+    <label style="margin-top:0">${esc(t('car_no'))}</label>
+    <div class="row"><input class="car-in" maxlength="16" autocomplete="off" placeholder="${esc(t('car_hint'))}" value="${esc(value)}">
+      <button class="car-save">${esc(t('car_save'))}</button></div>`;
+  const inp = el.querySelector('.car-in'), btn = el.querySelector('.car-save');
+  btn.onclick = async () => {
+    btn.disabled = true;
+    try {
+      const r = await save(inp.value);
+      inp.value = r.carNo; toast(t('car_saved'));
+      if (onSaved) onSaved(r.carNo);
+    } catch (e) { toast(errText(e), true); } finally { btn.disabled = false; }
+  };
+}
+const saveMyCar = (v) => api('/me/car', 'PUT', { carNo: v });
+
 /* ---------- 員工前台 ---------- */
 function meView(box) {
   box.classList.add('lg');
@@ -138,6 +156,7 @@ function infoView(box, d) {
         <dt>${esc(t('name'))}</dt><dd>${esc(m.name)}</dd>
         <dt>${esc(t('dept'))}</dt><dd>${esc(m.dept)}</dd>
         <dt>${esc(t('date'))}</dt><dd>${esc(m.date)}</dd>
+        <dt>${esc(t('car_no'))}</dt><dd class="car-v">${esc(m.carNo || '-')}</dd>
         <dt>${esc(t('checkin_time'))}</dt><dd>${esc(m.checkedAt)}</dd>
       </dl>
     </div>
@@ -150,7 +169,9 @@ function infoView(box, d) {
           <span class="no">${esc(x.empNo)}</span><span>${esc(x.name)}${x.self ? ' ' + esc(t('me')) : ''}</span>
           <span class="mute">${esc(x.dept)}</span>
         </div>`).join('')}
-    </div>`;
+    </div>
+    <div class="card" id="carBox"></div>`;
+  carEditor(box.querySelector('#carBox'), m.carNo, saveMyCar, (v) => { box.querySelector('.car-v').textContent = v || '-'; });
 }
 
 function checkinView(box, d) {
@@ -158,7 +179,8 @@ function checkinView(box, d) {
     <div class="card">
       <div class="big">${esc(t('need_checkin'))}</div>
       <div class="big" style="margin:12px 0">${esc(d.me.name)}</div>
-      <div class="mute">${esc(d.me.empNo)} · ${esc(d.me.dept)} · ${esc(d.me.date)} · ${esc(t('table'))} ${esc(d.me.table || '-')}</div>
+      <div class="mute">${esc(d.me.empNo)} · ${esc(d.me.dept)} · ${esc(d.me.date)} · ${esc(t('table'))} ${esc(d.me.table || '-')}
+        · ${esc(t('car_no'))} <span class="car-v">${esc(d.me.carNo || '-')}</span></div>
     </div>
     <div class="card">
       <h2>${esc(t('gps'))}</h2>
@@ -171,7 +193,9 @@ function checkinView(box, d) {
       <button id="scanBtn" class="block" style="margin-top:0" ${d.blocked ? 'disabled' : ''}>${esc(t('scan'))}</button>
       <div id="reader"></div>
       <div id="res"></div>
-    </div>`;
+    </div>
+    <div class="card" id="carBox"></div>`;
+  carEditor(box.querySelector('#carBox'), d.me.carNo, saveMyCar, (v) => { box.querySelector('.car-v').textContent = v || '-'; });
   const gps = box.querySelector('#gps'), res = box.querySelector('#res'), btn = box.querySelector('#scanBtn');
   let pos = null, scanner = null, busy = false;
 
@@ -242,6 +266,7 @@ function welfareView() {
     { key: 'manual', label: t('tab_manual'), render: wManual },
     { key: 'list', label: t('tab_list'), render: wList },
     { key: 'tables', label: t('tab_tables'), render: (b) => wTables(b) },
+    { key: 'cars', label: t('tab_cars'), render: (b) => wCars(b) },
     { key: 'me', label: t('tab_me'), render: meView },
   ]);
 }
@@ -297,14 +322,17 @@ function wManual(box) {
           <dt>${esc(t('name'))}</dt><dd>${esc(m.name)}</dd>
           <dt>${esc(t('dept'))}</dt><dd>${esc(m.dept)}</dd>
           <dt>${esc(t('table'))}</dt><dd>${esc(m.table || '-')}</dd>
+          ${m.checked === 'Y' ? `<dt>${esc(t('car_no'))}</dt><dd>${esc(m.carNo || '-')}</dd>` : ''}
         </dl>
         ${m.checked === 'Y' ? `<div class="msg-ok">${esc(t('checked_done'))} ${esc(m.checkedAt)}</div>`
-          : `<button id="ok" class="block">${esc(t('manual_ok'))}</button>`}`;
+          : `<label>${esc(t('car_no'))}</label>
+             <input id="carIn" maxlength="16" autocomplete="off" placeholder="${esc(t('car_hint'))}" value="${esc(m.carNo)}">
+             <button id="ok" class="block">${esc(t('manual_ok'))}</button>`}`;
       const ok = out.querySelector('#ok');
-      if (ok) ok.onclick = async () => {
+      if (ok) ok.onclick = async () => { // 確認報到時一併儲存車號
         ok.disabled = true;
         try {
-          await api('/manual-checkin', 'POST', { empNo: m.empNo });
+          await api('/manual-checkin', 'POST', { empNo: m.empNo, carNo: out.querySelector('#carIn').value });
           toast(t('checkin_ok')); inp.value = ''; out.innerHTML = `<div class="msg-ok">${esc(m.name)} ${esc(t('checkin_ok'))}</div>`;
         } catch (e) { ok.disabled = false; toast(errText(e), true); }
       };
@@ -361,8 +389,8 @@ function wList(box, date, filter = 'all') {
   }).catch((e) => { box.innerHTML = `<div class="msg-err">${esc(errText(e))}</div>`; });
 }
 
-// 桌號統計:依桌號彙總已報到人數,供與餐廳人員對點;open 為展開名單的桌號
-function wTables(box, date, open = new Set()) {
+// 桌號統計:依桌號彙總已報到人數,供與餐廳人員對點;open 為展開名單的桌號,onlyMissing 只顯示未到齊的桌
+function wTables(box, date, open = new Set(), onlyMissing = false) {
   box.innerHTML = `<div class="mute">${esc(t('loading'))}</div>`;
   api('/stats' + (date ? '?date=' + encodeURIComponent(date) : '')).then((s) => {
     const at = new Date().toLocaleTimeString();
@@ -374,6 +402,8 @@ function wTables(box, date, open = new Set()) {
     const seated = rows.filter((r) => r.done).length;
 
     const draw = () => {
+      const shown = onlyMissing ? rows.filter((r) => r.ms.length > r.done) : rows;
+      const seg = (on, key) => `<button class="${on ? '' : 'ghost'}" data-m="${key}">${esc(t(key))}</button>`;
       box.innerHTML = `
         <div class="card form-select">
           <label style="margin-top:0">${esc(t('date'))}</label>
@@ -390,11 +420,12 @@ function wTables(box, date, open = new Set()) {
             <button class="ghost" id="tr">${esc(t('refresh'))}</button>
           </div>
         </div>
-        <div class="mute" style="margin:0 4px 8px">${esc(t('table_tap_hint'))}</div>
+        <div class="seg">${seg(!onlyMissing, 'tables_all')}${seg(onlyMissing, 'tables_missing')}</div>
+        <div class="mute" style="margin:0 4px 8px">${esc(t('table_tap_hint'))} · ${esc(t('showing'))} ${shown.length} / ${rows.length} ${esc(t('tables_unit'))}</div>
         <div class="card scroll"><table class="tcount">
           <tr><th>${esc(t('table'))}</th><th class="num">${esc(t('checked'))}</th><th class="num">${esc(t('expected'))}</th><th class="num">${esc(t('unchecked'))}</th></tr>
-          ${rows.length ? '' : `<tr><td colspan="4" class="mute">${esc(t('no_data'))}</td></tr>`}
-          ${rows.map((r) => `
+          ${shown.length ? '' : `<tr><td colspan="4" class="mute">${esc(t(rows.length ? 'all_arrived' : 'no_data'))}</td></tr>`}
+          ${shown.map((r) => `
             <tr class="trow${r.done === r.ms.length ? ' full' : ''}" data-t="${esc(r.table)}">
               <td>${r.table ? esc(r.table) : esc(t('no_table'))}</td><td class="num n">${r.done}</td>
               <td class="num">${r.ms.length}</td><td class="num">${r.ms.length - r.done || '-'}</td></tr>
@@ -402,13 +433,43 @@ function wTables(box, date, open = new Set()) {
               `<span class="tn${m.checked === 'Y' ? '' : ' miss'}">${esc(m.empNo)} ${esc(m.name)}${m.checked === 'Y' ? '' : ' · ' + esc(t('unchecked'))}</span>`).join('')}</td></tr>` : ''}`).join('')}
           <tr class="sum"><td>${esc(t('sum'))}</td><td class="num">${s.checked}</td><td class="num">${s.total}</td><td class="num">${s.unchecked}</td></tr>
         </table></div>`;
-      box.querySelector('#td').onchange = (e) => wTables(box, e.target.value);
-      box.querySelector('#tr').onclick = () => wTables(box, s.date, open);
+      box.querySelector('#td').onchange = (e) => wTables(box, e.target.value, new Set(), onlyMissing);
+      box.querySelector('#tr').onclick = () => wTables(box, s.date, open, onlyMissing);
+      box.querySelectorAll('.seg button').forEach((b) => {
+        b.onclick = () => { onlyMissing = b.dataset.m === 'tables_missing'; draw(); };
+      });
       box.querySelectorAll('.trow').forEach((tr) => {
         tr.onclick = () => { const k = tr.dataset.t; if (open.has(k)) open.delete(k); else open.add(k); draw(); };
       });
     };
     draw();
+  }).catch((e) => { box.innerHTML = `<div class="msg-err">${esc(errText(e))}</div>`; });
+}
+
+// 車號清單 QRCode:餐廳服務人員掃描後以手機開啟 cars.html(有時效的簽章連結,只顯示車號)
+function wCars(box, date) {
+  box.innerHTML = `<div class="mute">${esc(t('loading'))}</div>`;
+  api('/car-link' + (date ? '?date=' + encodeURIComponent(date) : '')).then((r) => {
+    const url = `${location.origin}/cars.html?d=${encodeURIComponent(r.d)}&e=${encodeURIComponent(r.e)}&s=${encodeURIComponent(r.s)}`;
+    box.innerHTML = `
+      <div class="card form-select">
+        <label style="margin-top:0">${esc(t('date'))}</label>
+        <select id="cd">${r.dates.map((x) => `<option ${x === r.date ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
+      </div>
+      <div class="card center">
+        <h2>${esc(t('cars_qr_hint'))}</h2>
+        <div class="qrbox" id="cqr"></div>
+        <div style="margin-top:14px">${esc(t('cars_count'))}:<span class="big" style="font-size:26px">${r.count}</span></div>
+        <div class="mute" style="margin-top:6px">${esc(t('cars_expire'))} ${esc(r.expiresAt)}</div>
+        <div class="row" style="margin-top:14px;justify-content:center">
+          <a class="ghost-link" href="${esc(url)}" target="_blank" rel="noopener">${esc(t('cars_open'))}</a>
+          <button class="ghost" id="regen">${esc(t('cars_regen'))}</button>
+        </div>
+      </div>`;
+    const size = Math.min(300, window.innerWidth - 100);
+    new QRCode(box.querySelector('#cqr'), { text: url, width: size, height: size, correctLevel: QRCode.CorrectLevel.M });
+    box.querySelector('#cd').onchange = (e) => wCars(box, e.target.value);
+    box.querySelector('#regen').onclick = () => wCars(box, r.date);
   }).catch((e) => { box.innerHTML = `<div class="msg-err">${esc(errText(e))}</div>`; });
 }
 
@@ -465,13 +526,13 @@ function aEmp(box) {
     <div class="card scroll" id="tbl"></div>`;
   const tbl = box.querySelector('#tbl');
   const draw = () => {
-    const rows = list.filter((m) => !q || `${m.empNo}${m.name}${m.dept}`.toLowerCase().includes(q));
+    const rows = list.filter((m) => !q || `${m.empNo}${m.name}${m.dept}${m.carNo}`.toLowerCase().includes(q));
     tbl.innerHTML = `<table><tr>
       <th>${esc(t('date'))}</th><th>${esc(t('empNo'))}</th><th>${esc(t('name'))}</th><th>${esc(t('dept'))}</th><th>${esc(t('table'))}</th>
-      <th>${esc(t('checked_yn'))}</th><th>${esc(t('verified_yn'))}</th><th>${esc(t('welfare_yn'))}</th><th>${esc(t('approver'))}</th>
+      <th>${esc(t('car_no'))}</th><th>${esc(t('checked_yn'))}</th><th>${esc(t('verified_yn'))}</th><th>${esc(t('welfare_yn'))}</th><th>${esc(t('approver'))}</th>
       <th>${esc(t('location'))}</th><th>${esc(t('checkin_time'))}</th><th></th></tr>
       ${rows.map((m) => `<tr><td>${esc(m.date)}</td><td>${esc(m.empNo)}</td><td>${esc(m.name)}</td><td>${esc(m.dept)}</td><td>${esc(m.table)}</td>
-        <td>${esc(m.checked)}</td><td>${esc(m.verified)}</td><td>${esc(m.welfare)}</td><td>${esc(m.approver)}</td>
+        <td>${esc(m.carNo)}</td><td>${esc(m.checked)}</td><td>${esc(m.verified)}</td><td>${esc(m.welfare)}</td><td>${esc(m.approver)}</td>
         <td>${esc(m.location)}</td><td>${esc(m.checkedAt)}</td>
         <td><button class="ghost" data-e="${esc(m.id)}">${esc(t('edit'))}</button>
             <button class="ghost" data-x="${esc(m.id)}">${esc(t('delete'))}</button></td></tr>`).join('')}</table>`;
@@ -503,6 +564,7 @@ function aEmp(box) {
         <div><label>${esc(t('dept'))}</label><input id="e_dept" value="${esc(m.dept)}"></div>
         <div><label>${esc(t('password'))} ${isNew ? '' : esc(t('pwd_keep'))}</label><input id="e_pw"></div>
         <div><label>${esc(t('table'))}</label><input id="e_table" value="${esc(m.table)}"></div>
+        <div><label>${esc(t('car_no'))}</label><input id="e_car" maxlength="16" placeholder="${esc(t('car_hint'))}" value="${esc(m.carNo)}"></div>
         <div><label>${esc(t('checked_yn'))}</label>${yn('e_checked', m.checked)}</div>
         <div><label>${esc(t('verified_yn'))}</label>${yn('e_verified', m.verified)}</div>
         <div><label>${esc(t('welfare_yn'))}</label>${yn('e_welfare', m.welfare)}</div>
@@ -517,7 +579,7 @@ function aEmp(box) {
     ov.querySelector('#c').onclick = () => ov.remove();
     ov.querySelector('#s').onclick = async () => {
       const body = {
-        date: g('e_date'), empNo: g('e_no'), name: g('e_name'), dept: g('e_dept'), password: g('e_pw'), table: g('e_table'),
+        date: g('e_date'), empNo: g('e_no'), name: g('e_name'), dept: g('e_dept'), password: g('e_pw'), table: g('e_table'), carNo: g('e_car'),
         checked: g('e_checked'), verified: g('e_verified'), welfare: g('e_welfare'), approver: g('e_appr'), location: g('e_loc'), checkedAt: g('e_at'),
       };
       try {
@@ -557,14 +619,17 @@ function aImport(box) {
         .map((r) => {
           const x = r.map(cell);
           return { date: x[0], empNo: x[1], name: x[2], dept: x[3], password: x[4], table: x[5], checked: x[6], verified: x[7],
-            welfare: x[8], approver: x[9], location: x[10], checkedAt: x[11] };
+            welfare: x[8], approver: x[9], location: x[10], checkedAt: x[11], carNo: x[12] };
         });
       const hasHeader = aoa.length && String(aoa[0][0]).trim() === '日期';
       const r = await api('/import', 'POST', { rows: body, clear: box.querySelector('#clr').checked });
       if (r.errors.length) {
         out.innerHTML = `<div class="msg-err">${esc(t('import_err'))}<br>${r.errors.slice(0, 30).map((e) =>
           `${esc(t('row'))} ${e.row + (hasHeader ? 0 : -1)}: ${esc(terr(e.error))}`).join('<br>')}</div>`;
-      } else out.innerHTML = `<div class="msg-ok">${esc(t('import_ok'))}${r.imported}</div>`;
+      } else {
+        out.innerHTML = `<div class="msg-ok">${esc(t('import_ok'))}${r.imported}
+          (${esc(t('import_inserted'))} ${r.inserted} / ${esc(t('import_updated'))} ${r.updated})</div>`;
+      }
     } catch (e) { out.innerHTML = `<div class="msg-err">${esc(errText(e))}</div>`; }
     file.value = '';
   };

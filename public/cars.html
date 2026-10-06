@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#14110f">
+  <meta name="robots" content="noindex">
+  <title>已報到車號</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .cars { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px; }
+    .car { font-family: Consolas, "Courier New", monospace; font-size: 22px; letter-spacing: .06em; text-align: center;
+      padding: 12px 6px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg2); color: var(--gold2); }
+    .car mark { background: rgba(201,169,110,.35); color: inherit; border-radius: 3px; }
+    .count { font-size: 40px; }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="brand">UMT <span>Banquet</span></div>
+  </header>
+  <main id="app"><div class="mute">載入中…</div></main>
+  <script>
+    /* 餐廳服務人員用:掃描福委出示的 QRCode 後開啟,只顯示該梯次已報到人員的車號 */
+    const $app = document.getElementById('app');
+    const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const ERR = {
+      LINK_EXPIRED: '連結已過期,請向福委重新索取 QRCode。',
+      LINK_INVALID: '連結無效,請重新掃描福委出示的 QRCode。',
+      NETWORK: '網路連線失敗,請確認網路後按「重新整理」。',
+    };
+    let q = '';
+
+    async function load() {
+      let res, data;
+      try {
+        res = await fetch('/api/cars' + location.search);
+        data = await res.json().catch(() => ({}));
+      } catch (e) { data = { error: 'NETWORK' }; }
+      if (!res || !res.ok) {
+        $app.innerHTML = `<div class="card"><h2>無法顯示車號清單</h2>
+          <div class="msg-err big-msg">${esc(ERR[data.error] || '系統錯誤,請稍後再試。')}</div>
+          <button class="block" id="reload">重新整理</button></div>`;
+        document.getElementById('reload').onclick = load;
+        return;
+      }
+      const at = new Date().toLocaleTimeString();
+      $app.innerHTML = `
+        <div class="card">
+          <h1 style="margin-bottom:10px">已報到車號</h1>
+          <div class="center mute">梯次 ${esc(data.date)} · 連結有效至 ${esc(data.expiresAt)}</div>
+          <hr class="gold-line">
+          <div class="center"><span class="mute">車輛數</span><div class="big count">${data.count}</div></div>
+          <div class="row" style="margin-top:12px">
+            <span class="mute">更新時間 ${esc(at)}</span>
+            <button class="ghost" id="reload">重新整理</button>
+          </div>
+        </div>
+        <div class="card">
+          <input id="q" placeholder="搜尋車號(輸入部分即可)" autocomplete="off" inputmode="search" value="${esc(q)}">
+          <div class="mute" id="shown" style="margin:12px 0 10px"></div>
+          <div class="cars" id="list"></div>
+        </div>`;
+      const list = document.getElementById('list'), shown = document.getElementById('shown');
+      const draw = () => {
+        const k = q.trim().toUpperCase();
+        const rows = data.cars.filter((c) => !k || c.includes(k));
+        shown.textContent = `顯示 ${rows.length} / ${data.count}`;
+        list.innerHTML = rows.length
+          ? rows.map((c) => {
+            const i = k ? c.indexOf(k) : -1;
+            return `<div class="car">${i < 0 ? esc(c)
+              : esc(c.slice(0, i)) + '<mark>' + esc(c.slice(i, i + k.length)) + '</mark>' + esc(c.slice(i + k.length))}</div>`;
+          }).join('')
+          : '<div class="mute">查無符合的車號</div>';
+      };
+      document.getElementById('q').oninput = (e) => { q = e.target.value; draw(); };
+      document.getElementById('reload').onclick = load;
+      draw();
+    }
+    load();
+  </script>
+</body>
+</html>

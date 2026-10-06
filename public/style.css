@@ -99,7 +99,13 @@ button:disabled { cursor: not-allowed; filter: grayscale(.6); }
 .pressable.active { outline: 1px solid var(--gold); }
 @keyframes holdfill { to { width: 100%; } }
 
+/* 車號清單:看起來像 ghost 按鈕的連結 */
+a.ghost-link { display: inline-block; flex: 0 0 auto; min-width: 0; padding: 8px 12px; font-size: 14px; color: var(--gold);
+  border: 1px solid var(--gold); border-radius: 10px; text-decoration: none; letter-spacing: .08em; }
+
 /* 桌號統計 */
+.seg { display: flex; gap: 8px; margin: 0 0 10px; }
+.seg button { flex: 1; padding: 9px 10px; font-size: 14px; }
 .tcount .num { text-align: right; font-variant-numeric: tabular-nums; }
 .tcount .trow { cursor: pointer; }
 .tcount .trow td:first-child { color: var(--gold); }

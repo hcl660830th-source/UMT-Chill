@@ -35,6 +35,19 @@ function firestoreBackend() {
         await b.commit();
       }
     },
+    // 批次寫入:ops = [{op:'set'|'merge'|'delete', id, data}],每 400 筆一個 batch
+    async writeOps(ops) {
+      for (let i = 0; i < ops.length; i += 400) {
+        const b = fdb.batch();
+        ops.slice(i, i + 400).forEach(({ op, id, data }) => {
+          const ref = emp.doc(id);
+          if (op === 'delete') b.delete(ref);
+          else if (op === 'merge') b.set(ref, data, { merge: true });
+          else b.set(ref, data);
+        });
+        await b.commit();
+      }
+    },
     async update(id, patch) { await emp.doc(id).update(patch); },
     async remove(id) { await emp.doc(id).delete(); },
     async clearAll() {
@@ -80,6 +93,15 @@ function localBackend() {
     async listEmp(date) { return all().filter((d) => !date || d.date === date); },
     async listByTable(date, table) { return all().filter((d) => d.date === date && d.table === table); },
     async upsertMany(docs) { docs.forEach(({ id, ...d }) => { load().emp[id] = d; }); save(); },
+    async writeOps(ops) {
+      const e = load().emp;
+      ops.forEach(({ op, id, data }) => {
+        if (op === 'delete') delete e[id];
+        else if (op === 'merge') e[id] = { ...e[id], ...data };
+        else e[id] = { ...data };
+      });
+      save();
+    },
     async update(id, patch) { Object.assign(load().emp[id], patch); save(); },
     async remove(id) { delete load().emp[id]; save(); },
     async clearAll() { load().emp = {}; save(); },

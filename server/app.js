@@ -2,7 +2,7 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const cfg = require('./config');
 const db = require('./db');
-const { makeQr, verifyQr } = require('./qr');
+const { makeQr, verifyQr, makeCarLink, verifyCarLink } = require('./qr');
 const U = require('./util');
 
 const app = express();
@@ -17,7 +17,7 @@ const wrap = (fn) => (req, res) => fn(req, res).catch((e) => {
 
 // 對外欄位(不含密碼雜湊)
 const pub = (d) => ({
-  id: d.id, date: d.date, empNo: d.empNo, name: d.name, dept: d.dept, table: d.table || '',
+  id: d.id, date: d.date, empNo: d.empNo, name: d.name, dept: d.dept, table: d.table || '', carNo: d.carNo || '',
   checked: d.checked || 'N', verified: d.verified || 'N', welfare: d.welfare || 'N',
   approver: d.approver || '', location: d.location || '', checkedAt: d.checkedAt || '',
 });
@@ -100,6 +100,14 @@ api.post('/checkin', auth, need('employee', 'welfare'), wrap(async (req, res) =>
   res.json({ ok: true });
 }));
 
+// 員工修改自己的車號
+api.put('/me/car', auth, need('employee', 'welfare'), wrap(async (req, res) => {
+  const car = normCar(req.body.carNo);
+  if (car.err) return fail(res, 400, car.err);
+  await db.update(req.emp.id, { carNo: car.v });
+  res.json({ ok: true, carNo: car.v });
+}));
+
 /* ---------- 福委 ---------- */
 api.get('/qr', auth, need('welfare'), wrap(async (req, res) => {
   const p = await db.getParamsWithDefaults();
@@ -121,10 +129,16 @@ api.post('/manual-checkin', auth, need('welfare'), wrap(async (req, res) => {
   if (!emp) return fail(res, 404, 'EMP_NOT_FOUND');
   const p = await db.getParamsWithDefaults();
   if (emp.date !== p.verifyDate) return res.status(400).json({ error: 'VERIFY_FAILED', vdate: emp.date }); // 不予記錄
-  const ok = await db.checkinTx(emp.id, {
+  const patch = {
     checked: 'Y', verified: 'Y', approver: `${req.emp.empNo} ${req.emp.name}`.trim(),
     location: 'MANUAL', checkedAt: U.twDisplay(),
-  });
+  };
+  if (req.body.carNo !== undefined) { // 福委核對後的車號與報到同一筆交易寫入
+    const car = normCar(req.body.carNo);
+    if (car.err) return fail(res, 400, car.err);
+    patch.carNo = car.v;
+  }
+  const ok = await db.checkinTx(emp.id, patch);
   if (ok === false) return fail(res, 409, 'ALREADY_CHECKED');
   res.json({ ok: true });
 }));
@@ -143,6 +157,28 @@ api.get('/stats', auth, need('welfare'), wrap(async (req, res) => {
     verified: done.filter((d) => d.verified === 'Y').length,
     list: list.map(pub).sort((a, b) => String(a.empNo).localeCompare(String(b.empNo), 'en', { numeric: true })),
   });
+}));
+
+// 該梯次已報到且有車號者的車號(去重、排序)
+const checkedCars = async (date) => [...new Set((await db.listEmp(date))
+  .filter((d) => d.checked === 'Y' && d.carNo).map((d) => d.carNo))]
+  .sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+
+// 福委產生車號清單連結(QRCode 內容由前端以 location.origin 組成)
+api.get('/car-link', auth, need('welfare'), wrap(async (req, res) => {
+  const p = await db.getParamsWithDefaults();
+  const date = U.normDate(req.query.date);
+  const sel = cfg.DATES.includes(date) ? date : p.verifyDate;
+  const link = makeCarLink(sel);
+  res.json({ date: sel, dates: cfg.DATES, ...link, expiresAt: U.twDisplay(link.e * 1000), count: (await checkedCars(sel)).length });
+}));
+
+/* ---------- 公開:車號清單(餐廳服務人員掃 QRCode 後查看,僅回傳車號) ---------- */
+api.get('/cars', wrap(async (req, res) => {
+  const v = verifyCarLink(req.query);
+  if (v.err) return fail(res, 403, v.err);
+  const cars = await checkedCars(v.date);
+  res.json({ date: v.date, cars, count: cars.length, expiresAt: U.twDisplay(Number(req.query.e) * 1000) });
 }));
 
 /* ---------- 管理者 ---------- */
@@ -165,6 +201,14 @@ api.get('/emp', auth, need('admin'), wrap(async (req, res) => {
     a.date.localeCompare(b.date) || String(a.empNo).localeCompare(String(b.empNo), 'en', { numeric: true })));
 }));
 
+const str = (v) => String(v == null ? '' : v).trim();
+
+// 車號:去空白、轉大寫,最多 16 字元;空白表示未開車
+function normCar(v) {
+  const s = str(v).toUpperCase();
+  return s.length > 16 ? { err: 'BAD_CARNO' } : { v: s };
+}
+
 // 將輸入整理成 emp_file 文件;pwd 空白且為更新時保留原密碼
 function toDoc(r, keepPwd) {
   const date = U.normDate(r.date), empNo = String(r.empNo == null ? '' : r.empNo).trim();
@@ -173,10 +217,12 @@ function toDoc(r, keepPwd) {
   let pw = String(r.password == null ? '' : r.password).trim();
   if (/^\d{1,4}$/.test(pw)) pw = pw.padStart(5, '0');
   if (!pw && !keepPwd) return { err: 'BAD_PASSWORD' };
+  const car = normCar(r.carNo);
+  if (car.err) return { err: car.err };
   const doc = {
     id: U.docId(date, empNo), date, empNo,
     name: String(r.name == null ? '' : r.name).trim(), dept: String(r.dept == null ? '' : r.dept).trim(),
-    table: String(r.table == null ? '' : r.table).trim(),
+    table: String(r.table == null ? '' : r.table).trim(), carNo: car.v,
     checked: U.YN(r.checked), verified: U.YN(r.verified), welfare: U.YN(r.welfare),
     approver: String(r.approver == null ? '' : r.approver).trim(),
     location: String(r.location == null ? '' : r.location).trim(),
@@ -217,23 +263,48 @@ api.delete('/emp/:id', auth, need('admin'), wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
-// rows: [{date, empNo, name, dept, password, table, checked, verified, welfare, approver, location, checkedAt}]
+// rows: [{date, empNo, name, dept, password, table, checked, verified, welfare, approver, location, checkedAt, carNo}]
+// 不清空匯入:工號已存在 → 只更新 日期/部門/桌號/車號(空白保留原值),其餘欄位不動;不存在 → 新增
 api.post('/import', auth, need('admin'), wrap(async (req, res) => {
   const rows = Array.isArray(req.body.rows) ? req.body.rows : [];
-  const docs = [], errors = [], seen = new Set();
-  // 工號唯一:不清空匯入時,資料庫已有的工號不可再匯入
-  const existing = req.body.clear ? new Set() : new Set((await db.listEmp()).map((d) => d.empNo));
+  const clear = !!req.body.clear;
+  const ops = [], errors = [], seen = new Set();
+  let inserted = 0, updated = 0;
+  const existing = new Map(clear ? [] : (await db.listEmp()).map((d) => [d.empNo, d]));
   rows.forEach((r, i) => {
-    const { doc, err } = toDoc(r, false);
-    if (err) return errors.push({ row: i + 2, error: err });
-    if (seen.has(doc.empNo)) return errors.push({ row: i + 2, error: 'DUPLICATE' });
-    if (existing.has(doc.empNo)) return errors.push({ row: i + 2, error: 'EMP_EXISTS' });
-    seen.add(doc.empNo);
-    docs.push(doc);
+    const row = i + 2, empNo = str(r.empNo);
+    if (empNo && seen.has(empNo)) return errors.push({ row, error: 'DUPLICATE' });
+    const old = existing.get(empNo);
+    if (old) {
+      const date = U.normDate(r.date);
+      if (!cfg.DATES.includes(date)) return errors.push({ row, error: 'BAD_DATE' });
+      const car = normCar(r.carNo);
+      if (car.err) return errors.push({ row, error: car.err });
+      const patch = { date };
+      if (str(r.dept)) patch.dept = str(r.dept);
+      if (str(r.table)) patch.table = str(r.table);
+      if (car.v) patch.carNo = car.v;
+      const id = U.docId(date, empNo);
+      if (id === old.id) {
+        ops.push({ op: 'merge', id, data: patch });
+      } else { // 日期變更 = 文件 ID 變更:搬到新文件(保留全部原欄位)後刪除舊文件
+        const { id: oldId, ...rest } = old;
+        ops.push({ op: 'set', id, data: { ...rest, ...patch } }, { op: 'delete', id: oldId });
+      }
+      updated += 1;
+    } else {
+      const { doc, err } = toDoc(r, false);
+      if (err) return errors.push({ row, error: err });
+      const { id, ...data } = doc;
+      ops.push({ op: 'set', id, data });
+      inserted += 1;
+    }
+    seen.add(empNo);
   });
-  if (req.body.clear && !errors.length) await db.clearAll();
-  if (!errors.length) await db.upsertMany(docs);
-  res.json({ imported: errors.length ? 0 : docs.length, errors });
+  if (errors.length) return res.json({ imported: 0, inserted: 0, updated: 0, errors }); // 全有或全無
+  if (clear) await db.clearAll();
+  await db.writeOps(ops);
+  res.json({ imported: inserted + updated, inserted, updated, errors });
 }));
 
 app.use('/api', api);
